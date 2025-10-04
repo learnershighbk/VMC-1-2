@@ -1,11 +1,30 @@
 import axios, { isAxiosError } from "axios";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL ?? "",
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api",
   headers: {
     "Content-Type": "application/json",
   },
 });
+
+apiClient.interceptors.request.use(
+  async (config) => {
+    const supabase = getSupabaseBrowserClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session?.access_token) {
+      config.headers.Authorization = `Bearer ${session.access_token}`;
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 type ErrorPayload = {
   error?: {

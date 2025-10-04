@@ -95,15 +95,18 @@ export default function Home() {
     }
 
     if (isAuthenticated && user) {
+      const mainLink = user.role === "learner" ? "/courses" : "/dashboard";
+      const mainLinkText = user.role === "learner" ? "코스 목록" : "대시보드";
+
       return (
         <div className="flex items-center gap-3 text-sm text-slate-200">
           <span className="truncate">{user.email ?? "알 수 없는 사용자"}</span>
           <div className="flex items-center gap-2">
             <Link
-              href="/dashboard"
+              href={mainLink}
               className="rounded-md border border-slate-600 px-3 py-1 transition hover:border-slate-400 hover:bg-slate-800"
             >
-              대시보드
+              {mainLinkText}
             </Link>
             <button
               type="button"

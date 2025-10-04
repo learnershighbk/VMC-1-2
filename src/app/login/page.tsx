@@ -48,16 +48,45 @@ export default function LoginPage({ params }: LoginPageProps) {
           password: formState.password,
         });
 
-        const nextAction = result.error
-          ? result.error.message ?? "로그인에 실패했습니다."
-          : ("success" as const);
-
-        if (nextAction === "success") {
-          await refresh();
-          const redirectedFrom = searchParams.get("redirectedFrom") ?? "/";
-          router.replace(redirectedFrom);
+        if (result.error) {
+          const errorMsg = result.error.message;
+          let displayMessage = "로그인에 실패했습니다.";
+          
+          if (errorMsg.includes("Email not confirmed")) {
+            displayMessage = "이메일 인증이 필요합니다. 이메일을 확인해주세요.";
+          } else if (errorMsg.includes("Invalid login credentials")) {
+            displayMessage = "이메일 또는 비밀번호가 올바르지 않습니다.";
+          } else if (errorMsg.includes("Email not found")) {
+            displayMessage = "등록되지 않은 이메일입니다.";
+          }
+          
+          setErrorMessage(displayMessage);
         } else {
-          setErrorMessage(nextAction);
+          await refresh();
+          
+          const redirectedFrom = searchParams.get("redirectedFrom");
+          
+          if (redirectedFrom) {
+            router.replace(redirectedFrom);
+          } else {
+            const userId = result.data.user?.id;
+            if (userId) {
+              const { data: profile, error: profileError } = await supabase
+                .from("profiles")
+                .select("role")
+                .eq("id", userId)
+                .single<{ role: "learner" | "instructor" }>();
+              
+              if (!profileError && profile) {
+                const defaultRedirect = profile.role === "learner" ? "/courses" : "/dashboard";
+                router.replace(defaultRedirect);
+              } else {
+                router.replace("/dashboard");
+              }
+            } else {
+              router.replace("/");
+            }
+          }
         }
       } catch (error) {
         setErrorMessage("로그인 처리 중 오류가 발생했습니다.");

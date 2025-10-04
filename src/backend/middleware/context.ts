@@ -14,11 +14,9 @@ const logger: AppLogger = {
 };
 
 export const withAppContext = () => {
-  const config = getAppConfig();
-
   return createMiddleware<AppEnv>(async (c, next) => {
     c.set(contextKeys.logger, logger);
-    c.set(contextKeys.config, config);
+    c.set(contextKeys.config, getAppConfig());
 
     await next();
   });

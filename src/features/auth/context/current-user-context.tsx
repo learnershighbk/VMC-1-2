@@ -37,17 +37,36 @@ export const CurrentUserProvider = ({
     try {
       const result = await supabase.auth.getUser();
 
-      const nextSnapshot = match(result)
-        .with({ data: { user: P.nonNullable } }, ({ data }) => ({
-          status: "authenticated" as const,
-          user: {
-            id: data.user.id,
-            email: data.user.email,
-            appMetadata: data.user.app_metadata ?? {},
-            userMetadata: data.user.user_metadata ?? {},
-          },
-        }))
-        .otherwise(() => ({ status: "unauthenticated" as const, user: null }));
+      const authUser = result.data?.user;
+      
+      if (!authUser) {
+        const unauthSnapshot: CurrentUserSnapshot = {
+          status: "unauthenticated" as const,
+          user: null,
+        };
+        setSnapshot(unauthSnapshot);
+        queryClient.setQueryData(["currentUser"], unauthSnapshot);
+        return;
+      }
+
+      const { data: profile } = await (supabase
+        .from("profiles") as any)
+        .select("role")
+        .eq("id", authUser.id)
+        .single();
+
+      const userRole = profile && profile.role ? (profile.role as "learner" | "instructor") : null;
+
+      const nextSnapshot: CurrentUserSnapshot = {
+        status: "authenticated" as const,
+        user: {
+          id: authUser.id,
+          email: authUser.email,
+          role: userRole,
+          appMetadata: authUser.app_metadata ?? {},
+          userMetadata: authUser.user_metadata ?? {},
+        },
+      };
 
       setSnapshot(nextSnapshot);
       queryClient.setQueryData(["currentUser"], nextSnapshot);
